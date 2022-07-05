@@ -19,7 +19,7 @@ __email__ = "abaffa@inf.puc-rio.br"
 #############################################################
 
 from threading import Timer
-from GameAI import GameAI
+from GameAI import GameAI, Action
 import Socket.HandleClient
 from Socket.HandleClient import HandleClient
 from dto.PlayerInfo import PlayerInfo
@@ -31,7 +31,7 @@ import datetime
 # </summary>
 class Bot():
 
-    name = "INF1771 Bot Example1" # BOT NAME
+    name = "NOVO" # BOT NAME
     host = "atari.icad.puc-rio.br" # SERVER
 
     client = None
@@ -296,21 +296,21 @@ class Bot():
     def DoDecision(self):
 
         decision = self.gameAi.GetDecision()
-        if decision == "virar_direita":
+        if decision == Action.virar_direita:
             self.client.sendTurnRight()
-        elif decision == "virar_esquerda":
+        elif decision == Action.virar_esquerda:
             self.client.sendTurnLeft()
-        elif decision == "andar":
+        elif decision == Action.andar:
             self.client.sendForward()
-        elif decision ==  "atacar":
+        elif decision == Action.atacar:
             self.client.sendShoot()
-        elif decision ==  "pegar_ouro":
+        elif decision == Action.pegar_anel:
             self.client.sendGetItem()
-        elif decision == "pegar_anel":
+        elif decision == Action.pegar_ouro:
             self.client.sendGetItem()
-        elif decision == "pegar_powerup":
+        elif decision == Action.pegar_powerup:
             self.client.sendGetItem()
-        elif decision ==  "andar_re":
+        elif decision == Action.andar_re:
             self.client.sendBackward()
 
         self.client.sendRequestUserStatus()
@@ -357,7 +357,7 @@ class Bot():
 
             print("Connected")
             self.client.sendName(self.name)
-            #self.client.sendRGB(255,0,0)  # BOT COLOR
+            self.client.sendRGB(0,255,0)  # BOT COLOR
             self.client.sendRequestGameStatus()
             self.client.sendRequestUserStatus()
             self.client.sendRequestObservation()
