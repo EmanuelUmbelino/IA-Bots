@@ -21,8 +21,8 @@ __version__ = "1.0.0"
 __email__ = "abaffa@inf.puc-rio.br"
 #############################################################
 
-import gym
-from gym import spaces
+# import gym
+# from gym import spaces
 from enum import Enum
 
 
@@ -42,7 +42,7 @@ class Action(Enum):
 # </summary>
 
 
-class GameAI(gym.Env):
+class GameAI():
 
     player = Position()
     state = "ready"
@@ -55,7 +55,7 @@ class GameAI(gym.Env):
     # Rewards
 
     def __init__(self):
-        self.action_space = spaces.Discrete(self.n_actions)
+        # self.action_space = spaces.Discrete(self.n_actions)
 
         self.RestartPlayer()
 
@@ -89,7 +89,7 @@ class GameAI(gym.Env):
         self.score = score
         self.energy = energy
 
-        if self.started and
+        # if self.started and
 
 
     # <summary>
