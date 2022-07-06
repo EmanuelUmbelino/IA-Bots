@@ -296,21 +296,21 @@ class Bot():
     def DoDecision(self):
 
         decision = self.gameAi.GetDecision()
-        if decision == Action.virar_direita:
+        if decision == Action['virar_direita']:
             self.client.sendTurnRight()
-        elif decision == Action.virar_esquerda:
+        elif decision == Action['virar_esquerda']:
             self.client.sendTurnLeft()
-        elif decision == Action.andar:
+        elif decision == Action['andar']:
             self.client.sendForward()
-        elif decision == Action.atacar:
+        elif decision == Action['atacar']:
             self.client.sendShoot()
-        elif decision == Action.pegar_anel:
+        elif decision == Action['pegar_anel']:
             self.client.sendGetItem()
-        elif decision == Action.pegar_ouro:
+        elif decision == Action['pegar_ouro']:
             self.client.sendGetItem()
-        elif decision == Action.pegar_powerup:
+        elif decision == Action['pegar_powerup']:
             self.client.sendGetItem()
-        elif decision == Action.andar_re:
+        elif decision == Action['andar_re']:
             self.client.sendBackward()
 
         self.client.sendRequestUserStatus()

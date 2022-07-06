@@ -25,46 +25,47 @@ import gym
 from gym import spaces
 from enum import Enum
 import numpy as np
-
-class Directions(Enum):
-    north = (0, 1)
-    west = (-1,0)
-    south = (0, -1)
-    east = (1,0)
+from Map.Map import Map
 
 
-class Action(Enum):
-    virar_direita = 0
-    virar_esquerda = 1
-    andar = 2
-    atacar = 3
-    pegar_ouro = 4
-    pegar_anel = 5
-    pegar_powerup = 6
-    andar_re = 7
-    esperar = 8
+Direction = {
+    'north': (0,1),
+    'west': (-1,0),
+    'south': (0, -1),
+    'east': (1,0),
+}
 
+Action = {
+    'virar_direita': 0,
+    'virar_esquerda': 1,
+    'andar': 2,
+    'atacar': 3,
+    'pegar_ouro': 4,
+    'pegar_anel': 5,
+    'pegar_powerup': 6,
+    'andar_re': 7,
+    'esperar': 8,
+}
 
-class Map(Enum):
-    desconhecido = -1
-    nada = 0
-    moeda = 1
-    anel = 2
-    powerup = 3
-    poco = 4
-    parede = 5
-    teletransporte = 6
+Tile = {
+    'desconhecido': 0,
+    'nada': 1,
+    'moeda': 2,
+    'anel': 3,
+    'powerup': 4,
+    'poco': 5,
+    'parede': 6,
+    'teletransporte': 7,
+}
 
 # <summary>
 # Game AI Example
 # </summary>
-
-
 class GameAI(gym.Env):
 
     player = Position()
     state = "ready"
-    dir = Directions.north
+    dir = Direction['north']
     score = 0
     energy = 0
 
@@ -72,12 +73,10 @@ class GameAI(gym.Env):
 
     n_actions = 9
 
-    # Rewards
-
     def __init__(self): 
         super(GameAI, self).__init__()
 
-        self.RestartPlayer()
+        self.reset()
         
         # The action space
         self.action_space = spaces.Discrete(self.n_actions)
@@ -86,10 +85,11 @@ class GameAI(gym.Env):
             spaces={
                 "position": gym.spaces.Box(low=0, high=(self.grid_size[0]-1), shape=(2,), dtype=np.int32),
                 "direction": gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.int32),
-                "grid": gym.spaces.Box(low = -1, high = 6, shape = self.grid_size, dtype=np.uint8),
+                "grid": gym.spaces.Box(low = 0, high = 7, shape = self.grid_size, dtype=np.uint8),
             })
 
-    def RestartPlayer(self):
+    def reset(self):
+        self.grid = Map(self.grid_size)
         self.blueLight = False
         self.redLight = False
         self.weakLight = False
@@ -97,10 +97,14 @@ class GameAI(gym.Env):
         self.dinheiro = False
 
         self.started = False
+        return self._get_obs()
+             
+    def _get_obs(self):
+            #return observation in the format of self.observation_space
+            return {"position": np.array((self.player.x, self.player.y), dtype=np.int32),
+                    "direction" : self.dir,
+                    "grid": self.grid.get()}      
 
-
-    def grid_distance(self, pos1, pos2):
-        return np.linalg.norm(np.array(pos1,dtype=np.float32)-np.array(pos2,dtype=np.float32))
 
     # <summary>
     # Refresh player status
@@ -117,7 +121,7 @@ class GameAI(gym.Env):
         print('\n STATUS ->', x, y, dir, state, score, energy)
         self.player.x = x
         self.player.y = y
-        self.dir = Directions(dir.lower()) 
+        self.dir = Direction[dir.lower()] 
 
         self.state = state
         self.score = score
@@ -219,12 +223,15 @@ class GameAI(gym.Env):
                 pass
 
             elif s == "steps":
+                self.steps = True
                 pass
 
             elif s == "breeze":
+                self.breeze = True
                 pass
 
             elif s == "flash":
+                self.flash = True
                 pass
 
             elif s == "blueLight":
@@ -236,6 +243,7 @@ class GameAI(gym.Env):
                 pass
 
             elif s == "greenLight":
+                self.greenLight = True
                 pass
 
             elif s == "weakLight":
@@ -267,18 +275,18 @@ class GameAI(gym.Env):
     def GetDecision(self):
         decision = ""
         if self.blueLight or self.weakLight:
-            decision = Action.pegar_ouro
+            decision = Action['pegar_ouro']
             self.dinheiro = True
         elif self.dinheiro:
-            decision = Action.esperar
+            decision = Action['esperar']
         elif self.redLight and self.energy < 100:
-            decision = Action.pegar_powerup
+            decision = Action['pegar_powerup']
         else:
             if self.blocked:
                 self.blocked = False
-                decision = Action.virar_esquerda
+                decision = Action['virar_esquerda']
             else:
-                decision = Action.andar
+                decision = Action['andar']
 
         # print('decision ->', decision)
         return decision
