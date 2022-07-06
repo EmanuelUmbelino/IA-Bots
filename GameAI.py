@@ -56,6 +56,7 @@ Tile = {
     'poco': 5,
     'parede': 6,
     'teletransporte': 7,
+    'pegavel': 8,
 }
 
 # <summary>
@@ -85,7 +86,7 @@ class GameAI(gym.Env):
             spaces={
                 "position": gym.spaces.Box(low=0, high=(self.grid_size[0]-1), shape=(2,), dtype=np.int32),
                 "direction": gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.int32),
-                "grid": gym.spaces.Box(low = 0, high = 7, shape = self.grid_size, dtype=np.uint8),
+                "grid": gym.spaces.Box(low = 0, high = 8, shape = self.grid_size, dtype=np.uint8),
             })
 
     def reset(self):
@@ -115,12 +116,10 @@ class GameAI(gym.Env):
     # <param name="state">player state</param>
     # <param name="score">player score</param>
     # <param name="energy">player energy</param>
-
     def SetStatus(self, x, y, dir, state, score, energy):
 
         print('\n STATUS ->', x, y, dir, state, score, energy)
-        self.player.x = x
-        self.player.y = y
+        self.SetPlayerPosition(x,y)
         self.dir = Direction[dir.lower()] 
 
         self.state = state
@@ -134,7 +133,6 @@ class GameAI(gym.Env):
     # Get list of observable adjacent positions
     # </summary>
     # <returns>List of observable adjacent positions</returns>
-
     def GetObservableAdjacentPositions(self):
         ret = []
 
@@ -149,21 +147,20 @@ class GameAI(gym.Env):
     # Get list of all adjacent positions (including diagonal)
     # </summary>
     # <returns>List of all adjacent positions (including diagonal)</returns>
-
     def GetAllAdjacentPositions(self):
 
         ret = []
 
-        ret.Add(Position(self.player.x - 1, self.player.y - 1))
-        ret.Add(Position(self.player.x, self.player.y - 1))
-        ret.Add(Position(self.player.x + 1, self.player.y - 1))
+        ret.append(Position(self.player.x - 1, self.player.y - 1))
+        ret.append(Position(self.player.x, self.player.y - 1))
+        ret.append(Position(self.player.x + 1, self.player.y - 1))
 
-        ret.Add(Position(self.player.x - 1, self.player.y))
-        ret.Add(Position(self.player.x + 1, self.player.y))
+        ret.append(Position(self.player.x - 1, self.player.y))
+        ret.append(Position(self.player.x + 1, self.player.y))
 
-        ret.Add(Position(self.player.x - 1, self.player.y + 1))
-        ret.Add(Position(self.player.x, self.player.y + 1))
-        ret.Add(Position(self.player.x + 1, self.player.y + 1))
+        ret.append(Position(self.player.x - 1, self.player.y + 1))
+        ret.append(Position(self.player.x, self.player.y + 1))
+        ret.append(Position(self.player.x + 1, self.player.y + 1))
 
         return ret
 
@@ -171,10 +168,8 @@ class GameAI(gym.Env):
     # Get next forward position
     # </summary>
     # <returns>next forward position</returns>
-
     def NextPosition(self):
-
-        ret = None
+        ret = Position()
 
         if self.dir == "north":
             ret = Position(self.player.x, self.player.y - 1)
@@ -194,7 +189,6 @@ class GameAI(gym.Env):
     # Player position
     # </summary>
     # <returns>player position</returns>
-
     def GetPlayerPosition(self):
         return self.player
 
@@ -203,7 +197,6 @@ class GameAI(gym.Env):
     # </summary>
     # <param name="x">x position</param>
     # <param name="y">y position</param>
-
     def SetPlayerPosition(self, x, y):
         self.player.x = x
         self.player.y = y
@@ -212,13 +205,12 @@ class GameAI(gym.Env):
     # Observations received
     # </summary>
     # <param name="o">list of observations</param>
-
     def GetObservations(self, o):
-        #cmd = "";
         print('observations ->', o)
+        nextPos = self.NextPosition()
         for s in o:
-
             if s == "blocked":
+                self.grid.setPos(nextPos, Tile['parede'])
                 self.blocked = True
                 pass
 
@@ -235,10 +227,12 @@ class GameAI(gym.Env):
                 pass
 
             elif s == "blueLight":
+                self.grid.setPos(self.player, Tile['pegavel'])
                 self.blueLight = True
                 pass
 
             elif s == "redLight":
+                self.grid.setPos(self.player, Tile['powerup'])
                 self.redLight = True
                 pass
 
@@ -247,6 +241,7 @@ class GameAI(gym.Env):
                 pass
 
             elif s == "weakLight":
+                self.grid.setPos(self.player, Tile['pegavel'])
                 self.weakLight = True
                 pass
 
@@ -259,7 +254,6 @@ class GameAI(gym.Env):
     # <summary>
     # No observations received
     # </summary>
-
     def GetObservationsClean(self):
         self.redLight = False
         self.blueLight = False
@@ -271,7 +265,6 @@ class GameAI(gym.Env):
     # Get Decision
     # </summary>
     # <returns>command string to new decision</returns>
-
     def GetDecision(self):
         decision = ""
         if self.blueLight or self.weakLight:
