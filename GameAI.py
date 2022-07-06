@@ -21,9 +21,16 @@ __version__ = "1.0.0"
 __email__ = "abaffa@inf.puc-rio.br"
 #############################################################
 
-# import gym
-# from gym import spaces
+import gym
+from gym import spaces
 from enum import Enum
+import numpy as np
+
+class Directions(Enum):
+    north = (0, 1)
+    west = (-1,0)
+    south = (0, -1)
+    east = (1,0)
 
 
 class Action(Enum):
@@ -37,27 +44,50 @@ class Action(Enum):
     andar_re = 7
     esperar = 8
 
+
+class Map(Enum):
+    desconhecido = -1
+    nada = 0
+    moeda = 1
+    anel = 2
+    powerup = 3
+    poco = 4
+    parede = 5
+    teletransporte = 6
+
 # <summary>
 # Game AI Example
 # </summary>
 
 
-class GameAI():
+class GameAI(gym.Env):
 
     player = Position()
     state = "ready"
-    dir = "north"
+    dir = Directions.north
     score = 0
     energy = 0
 
-    n_actions = 8
+    grid_size = (59, 34)
+
+    n_actions = 9
 
     # Rewards
 
-    def __init__(self):
-        # self.action_space = spaces.Discrete(self.n_actions)
+    def __init__(self): 
+        super(GameAI, self).__init__()
 
         self.RestartPlayer()
+        
+        # The action space
+        self.action_space = spaces.Discrete(self.n_actions)
+        # The observation space
+        self.observation_space = gym.spaces.Dict(
+            spaces={
+                "position": gym.spaces.Box(low=0, high=(self.grid_size[0]-1), shape=(2,), dtype=np.int32),
+                "direction": gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.int32),
+                "grid": gym.spaces.Box(low = -1, high = 6, shape = self.grid_size, dtype=np.uint8),
+            })
 
     def RestartPlayer(self):
         self.blueLight = False
@@ -67,6 +97,10 @@ class GameAI():
         self.dinheiro = False
 
         self.started = False
+
+
+    def grid_distance(self, pos1, pos2):
+        return np.linalg.norm(np.array(pos1,dtype=np.float32)-np.array(pos2,dtype=np.float32))
 
     # <summary>
     # Refresh player status
@@ -83,7 +117,7 @@ class GameAI():
         print('\n STATUS ->', x, y, dir, state, score, energy)
         self.player.x = x
         self.player.y = y
-        self.dir = dir.lower()
+        self.dir = Directions(dir.lower()) 
 
         self.state = state
         self.score = score
