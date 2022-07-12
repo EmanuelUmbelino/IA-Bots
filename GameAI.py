@@ -30,10 +30,10 @@ import random as rn
 
 
 Direction = {
-    'north': (0,1),
-    'west': (-1,0),
+    'north': (0, 1),
+    'west': (-1, 0),
     'south': (0, -1),
-    'east': (1,0),
+    'east': (1, 0),
 }
 
 Action = {
@@ -64,6 +64,8 @@ Tile = {
 # <summary>
 # Game AI Example
 # </summary>
+
+
 class GameAI(gym.Env):
 
     player = Position()
@@ -76,11 +78,11 @@ class GameAI(gym.Env):
 
     n_actions = 9
 
-    def __init__(self): 
+    def __init__(self):
         super(GameAI, self).__init__()
 
         self.reset()
-        
+
         # The action space
         self.action_space = spaces.Discrete(self.n_actions)
         # The observation space
@@ -88,7 +90,7 @@ class GameAI(gym.Env):
             spaces={
                 "position": gym.spaces.Box(low=0, high=(self.grid_size[0]-1), shape=(2,), dtype=np.int32),
                 "direction": gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.int32),
-                "grid": gym.spaces.Box(low = 0, high = 8, shape = self.grid_size, dtype=np.uint8),
+                "grid": gym.spaces.Box(low=0, high=8, shape=self.grid_size, dtype=np.uint8),
             })
 
     def reset(self):
@@ -108,13 +110,12 @@ class GameAI(gym.Env):
 
         self.started = False
         return self._get_obs()
-             
-    def _get_obs(self):
-            #return observation in the format of self.observation_space
-            return {"position": np.array((self.player.x, self.player.y), dtype=np.int32),
-                    "direction" : self.dir,
-                    "grid": self.grid.get()}      
 
+    def _get_obs(self):
+        # return observation in the format of self.observation_space
+        return {"position": np.array((self.player.x, self.player.y), dtype=np.int32),
+                "direction": self.dir,
+                "grid": self.grid.get()}
 
     # <summary>
     # Refresh player status
@@ -125,11 +126,13 @@ class GameAI(gym.Env):
     # <param name="state">player state</param>
     # <param name="score">player score</param>
     # <param name="energy">player energy</param>
+
     def SetStatus(self, x, y, dir, state, score, energy):
 
-        print('\n STATUS ->', x, y, dir, state, score, energy)
-        self.SetPlayerPosition(x,y)
-        self.dir = Direction[dir.lower()] 
+        if state != 'dead':
+            print('\n STATUS ->', x, y, dir, state, score, energy)
+        self.SetPlayerPosition(x, y)
+        self.dir = Direction[dir.lower()]
 
         self.state = state
         self.score = score
@@ -137,11 +140,11 @@ class GameAI(gym.Env):
 
         # if self.started and
 
-
     # <summary>
     # Get list of observable adjacent positions
     # </summary>
     # <returns>List of observable adjacent positions</returns>
+
     def GetObservableAdjacentPositions(self):
         ret = []
 
@@ -219,7 +222,7 @@ class GameAI(gym.Env):
         currPos = self.GetPlayerPosition()
         currTup = (currPos.x, currPos.y)
         self.visitado[currTup] = True
-        
+
         nextPos = self.NextPosition()
         for s in o:
             if s == "blocked":
@@ -276,6 +279,8 @@ class GameAI(gym.Env):
         self.blueLight = False
         self.weakLight = False
         self.blocked = False
+
+        self.mark_empty()
         pass
 
     # <summary>
@@ -284,6 +289,11 @@ class GameAI(gym.Env):
     # <returns>command string to new decision</returns>
     def GetDecision(self):
         decision = ""
+
+        if self.steps:
+            self.steps = False
+            return Action['atacar']
+
         adj = self.GetObservableAdjacentPositions()
         for pos in adj:
             if pos.x < 0 or pos.y < 0 or pos.x > 58 or pos.y > 33:
@@ -293,7 +303,7 @@ class GameAI(gym.Env):
                 posTup = (pos.x, pos.y)
                 if posTup not in self.visitado:
                     self.open.append(posTup)
-            
+
         if self.blueLight or self.weakLight:
             return Action['pegar_ouro']
         elif self.redLight and self.energy < 100:
@@ -301,47 +311,45 @@ class GameAI(gym.Env):
             self.powerUps[posTup] = True
             return Action['pegar_powerup']
 
-        if self.steps:
-            self.steps = False
-            return Action['atacar']
-
         return self.explore()
 
     def dist(self, pos1, pos2):
         return abs(pos1.x - pos2.x) + abs(pos1.y - pos2.y)
 
     def explore(self):
-        zeros = {}
         grid = self.grid.get()
+        currPos = self.GetPlayerPosition()
         next = self.NextPosition()
         if next.x < 0 or next.y < 0 or next.x > 58 or next.y > 33:
             return Action['andar_re']
 
-        if self.blocked or grid[next.x, next.y] in [5, 9]:
+        if self.blocked or grid[next.x, next.y] in [Tile['maybe_poco'], Tile['poco']]:
             self.blocked = False
-            adj = self.GetObservableAdjacentPositions()[0: 2]
-            posTup = (adj[0].x, adj[0].y)
             return rn.choice([Action['virar_direita'], Action['virar_esquerda']])
         else:
             return Action['andar']
 
-    def mark_possible_poco(self):
+    def mark_empty(self):
         adj = self.GetObservableAdjacentPositions()
-        grid = self.grid.get()
         currPos = self.GetPlayerPosition()
         posTup = (currPos.x, currPos.y)
-        
+
         if posTup in self.visitado:
             return
 
         for pos in adj:
-            if self.self_pos_equal(pos):
-                continue
+            self.grid.setPos(pos, Tile['nada'])
 
-            if grid[pos.x, pos.y] == 0:
-                grid[pos.x, pos.y] = Tile['maybe_poco']
-            elif grid[pos.x, pos.y] == Tile['maybe_poco']:
-                grid[pos.x, pos.y] = Tile['poco']
+    def mark_possible_poco(self):
+        adj = self.GetObservableAdjacentPositions()
+        currPos = self.GetPlayerPosition()
+        posTup = (currPos.x, currPos.y)
+
+        if posTup in self.visitado:
+            return
+
+        for pos in adj:
+            self.grid.setPos(pos, Tile['maybe_poco'])
 
     def self_pos_equal(self, pos):
         currPos = self.GetPlayerPosition()
@@ -349,4 +357,3 @@ class GameAI(gym.Env):
 
     def pos_equal(self, pos1, pos2):
         return pos1.x == pos2.x and pos1.y == pos2.y
-
