@@ -26,6 +26,7 @@ from gym import spaces
 from enum import Enum
 import numpy as np
 from Map.Map import Map
+import random as rn
 
 
 Direction = {
@@ -57,6 +58,7 @@ Tile = {
     'parede': 6,
     'teletransporte': 7,
     'pegavel': 8,
+    'maybe_poco': 9,
 }
 
 # <summary>
@@ -95,7 +97,14 @@ class GameAI(gym.Env):
         self.redLight = False
         self.weakLight = False
         self.blocked = False
-        self.dinheiro = False
+        self.steps = False
+        self.checkedPoco = {}
+        self.visitado = {}
+        self.open = []
+        self.powerUps = {}
+        self.destination = None
+        self.estado = ""
+        # self.dinheiro = False
 
         self.started = False
         return self._get_obs()
@@ -207,6 +216,10 @@ class GameAI(gym.Env):
     # <param name="o">list of observations</param>
     def GetObservations(self, o):
         print('observations ->', o)
+        currPos = self.GetPlayerPosition()
+        currTup = (currPos.x, currPos.y)
+        self.visitado[currTup] = True
+        
         nextPos = self.NextPosition()
         for s in o:
             if s == "blocked":
@@ -215,11 +228,12 @@ class GameAI(gym.Env):
                 pass
 
             elif s == "steps":
-                self.steps = True
+                # self.steps = True
                 pass
 
             elif s == "breeze":
                 self.breeze = True
+                self.mark_possible_poco()
                 pass
 
             elif s == "flash":
@@ -251,6 +265,9 @@ class GameAI(gym.Env):
             elif s == "damage":
                 pass
 
+            elif "enemy" in s:
+                self.steps = True
+
     # <summary>
     # No observations received
     # </summary>
@@ -267,19 +284,69 @@ class GameAI(gym.Env):
     # <returns>command string to new decision</returns>
     def GetDecision(self):
         decision = ""
-        if self.blueLight or self.weakLight:
-            decision = Action['pegar_ouro']
-            self.dinheiro = True
-        elif self.dinheiro:
-            decision = Action['esperar']
-        elif self.redLight and self.energy < 100:
-            decision = Action['pegar_powerup']
-        else:
-            if self.blocked:
-                self.blocked = False
-                decision = Action['virar_esquerda']
-            else:
-                decision = Action['andar']
+        adj = self.GetObservableAdjacentPositions()
+        for pos in adj:
+            if pos.x < 0 or pos.y < 0 or pos.x > 58 or pos.y > 33:
+                continue
 
-        # print('decision ->', decision)
-        return decision
+            if self.grid.get()[pos.x, pos.y] not in (5, 9):
+                posTup = (pos.x, pos.y)
+                if posTup not in self.visitado:
+                    self.open.append(posTup)
+            
+        if self.blueLight or self.weakLight:
+            return Action['pegar_ouro']
+        elif self.redLight and self.energy < 100:
+            posTup = (pos.x, pos.y)
+            self.powerUps[posTup] = True
+            return Action['pegar_powerup']
+
+        if self.steps:
+            self.steps = False
+            return Action['atacar']
+
+        return self.explore()
+
+    def dist(self, pos1, pos2):
+        return abs(pos1.x - pos2.x) + abs(pos1.y - pos2.y)
+
+    def explore(self):
+        zeros = {}
+        grid = self.grid.get()
+        next = self.NextPosition()
+        if next.x < 0 or next.y < 0 or next.x > 58 or next.y > 33:
+            return Action['andar_re']
+
+        if self.blocked or grid[next.x, next.y] in [5, 9]:
+            self.blocked = False
+            adj = self.GetObservableAdjacentPositions()[0: 2]
+            posTup = (adj[0].x, adj[0].y)
+            return rn.choice([Action['virar_direita'], Action['virar_esquerda']])
+        else:
+            return Action['andar']
+
+    def mark_possible_poco(self):
+        adj = self.GetObservableAdjacentPositions()
+        grid = self.grid.get()
+        currPos = self.GetPlayerPosition()
+        posTup = (currPos.x, currPos.y)
+        
+        if posTup in self.visitado:
+            return
+
+        for pos in adj:
+            if self.self_pos_equal(pos):
+                continue
+
+            if grid[pos.x, pos.y] == 0:
+                grid[pos.x, pos.y] = Tile['maybe_poco']
+            elif grid[pos.x, pos.y] == Tile['maybe_poco']:
+                grid[pos.x, pos.y] = Tile['poco']
+
+    def self_pos_equal(self, pos):
+        currPos = self.GetPlayerPosition()
+        return self.pos_equal(currPos, pos)
+
+    def pos_equal(self, pos1, pos2):
+        return pos1.x == pos2.x and pos1.y == pos2.y
+
